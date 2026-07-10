@@ -62,7 +62,12 @@ export default function LoginPage() {
           className="mt-1 w-full rounded-lg border border-card2 bg-card2 px-3 py-2 text-foreground outline-none focus:border-accent"
         />
 
-        <label className="mt-4 block text-sm text-muted">Password</label>
+        <div className="mt-4 flex items-center justify-between">
+          <label className="block text-sm text-muted">Password</label>
+          <Link href="/forgot-password" className="text-sm text-accent hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         <input
           required
           type="password"
