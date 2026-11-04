@@ -26,7 +26,7 @@ export default async function ClientDashboard() {
 
   const { data: program } = await supabase
     .from('programs')
-    .select('id, name, phase_name, phase_week, phase_total_weeks')
+    .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, cardio_target, meal_plan')
     .eq('client_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -72,6 +72,16 @@ export default async function ClientDashboard() {
     .select('logged_date, weight')
     .eq('client_id', user.id)
     .gte('logged_date', toDateStr(yearStart))
+    .order('logged_date', { ascending: false })
+
+  // Nutrition/cardio check-ins (last 45 days)
+  const fortyFiveDaysAgo = new Date()
+  fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45)
+  const { data: checkinRows } = await supabase
+    .from('daily_checkins')
+    .select('logged_date, cardio_minutes, end_of_day_calories')
+    .eq('client_id', user.id)
+    .gte('logged_date', toDateStr(fortyFiveDaysAgo))
     .order('logged_date', { ascending: false })
 
   // Workout log dates (last 60 days) — for streak + week strip
@@ -210,6 +220,12 @@ export default async function ClientDashboard() {
       prData={prData}
       recentPrs={recentPrs}
       workoutHistory={workoutHistory}
+      nutritionPlan={{
+        calorie_target: program?.calorie_target ?? null,
+        cardio_target: program?.cardio_target ?? null,
+        meal_plan: (program?.meal_plan as string[] | null) ?? null,
+      }}
+      checkins={checkinRows ?? []}
     />
   )
 }

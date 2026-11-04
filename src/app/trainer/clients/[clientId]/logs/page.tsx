@@ -38,6 +38,22 @@ export default async function ClientLogsPage({
     .order('logged_date', { ascending: false })
     .limit(30)
 
+  const { data: checkins } = await supabase
+    .from('daily_checkins')
+    .select('logged_date, cardio_minutes, end_of_day_calories')
+    .eq('client_id', clientId)
+    .order('logged_date', { ascending: false })
+    .limit(14)
+
+  const { data: latestProgram } = await supabase
+    .from('programs')
+    .select('calorie_target')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const calorieTarget = latestProgram?.calorie_target ?? null
+
   return (
     <main className="min-h-screen bg-background px-6 py-8">
       <div className="mx-auto max-w-4xl">
@@ -59,6 +75,47 @@ export default async function ClientLogsPage({
                 <p className="text-sm font-medium text-foreground">{l.weight} lb</p>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Nutrition / cardio check-ins */}
+      {checkins && checkins.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold text-foreground">
+            Nutrition &amp; cardio (last 14 days)
+          </h2>
+          <div className="mt-3 overflow-x-auto rounded-xl border border-card2 bg-card p-4">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-muted">
+                  <th className="pb-2 font-normal">Date</th>
+                  <th className="pb-2 font-normal">Cardio</th>
+                  <th className="pb-2 font-normal">Calories</th>
+                  <th className="pb-2 font-normal">vs target</th>
+                </tr>
+              </thead>
+              <tbody>
+                {checkins.map((c) => {
+                  const delta =
+                    c.end_of_day_calories != null && calorieTarget != null
+                      ? c.end_of_day_calories - calorieTarget
+                      : null
+                  return (
+                    <tr key={c.logged_date} className="border-t border-card2 text-foreground">
+                      <td className="py-2 text-muted">{formatDate(c.logged_date)}</td>
+                      <td className="py-2">
+                        {c.cardio_minutes != null ? `${c.cardio_minutes} min` : '—'}
+                      </td>
+                      <td className="py-2">{c.end_of_day_calories ?? '—'}</td>
+                      <td className="py-2">
+                        {delta == null ? '—' : `${delta > 0 ? '+' : ''}${delta}`}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

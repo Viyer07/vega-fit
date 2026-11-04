@@ -19,7 +19,10 @@ create table programs (
   phase_name text,
   phase_week int not null default 1,
   phase_total_weeks int not null default 4,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  calorie_target int,
+  cardio_target text,
+  meal_plan jsonb
 );
 
 create table workout_days (
@@ -178,4 +181,24 @@ create policy "view own bodyweight or client's" on bodyweight_logs
   for select using (client_id = auth.uid() or is_trainer_of(client_id));
 
 create policy "client manages own bodyweight" on bodyweight_logs
+  for all using (client_id = auth.uid()) with check (client_id = auth.uid());
+
+-- Daily nutrition/cardio check-in (weight stays in bodyweight_logs)
+create table daily_checkins (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references profiles(id) on delete cascade,
+  logged_date date not null default current_date,
+  cardio_minutes int,
+  end_of_day_calories int,
+  created_at timestamptz not null default now(),
+  unique (client_id, logged_date)
+);
+
+create index on daily_checkins (client_id, logged_date);
+alter table daily_checkins enable row level security;
+
+create policy "view own checkins or client's" on daily_checkins
+  for select using (client_id = auth.uid() or is_trainer_of(client_id));
+
+create policy "client manages own checkins" on daily_checkins
   for all using (client_id = auth.uid()) with check (client_id = auth.uid());

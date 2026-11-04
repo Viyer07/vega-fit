@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ExercisePicker from './ExercisePicker'
 import RoutineSummary from '@/app/RoutineSummary'
+import NutritionPlanForm from './NutritionPlanForm'
 
 type Exercise = {
   id: string
@@ -32,6 +33,9 @@ type Program = {
   phase_name: string | null
   phase_week: number
   phase_total_weeks: number
+  calorie_target?: number | null
+  cardio_target?: string | null
+  meal_plan?: string[] | null
 }
 
 export default function ProgramBuilder({
@@ -67,7 +71,7 @@ export default function ProgramBuilder({
         phase_week: Number(formData.get('phase_week') || 1),
         phase_total_weeks: Number(formData.get('phase_total_weeks') || 4),
       })
-      .select('id, name, phase_name, phase_week, phase_total_weeks')
+      .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, cardio_target, meal_plan')
       .single()
     setBusy(false)
     if (error) return alert(error.message)
@@ -202,6 +206,15 @@ export default function ProgramBuilder({
           {program.phase_name ?? 'Phase'} — week {program.phase_week}/{program.phase_total_weeks}
         </p>
       </div>
+
+      <NutritionPlanForm
+        programId={program.id}
+        initial={{
+          calorie_target: program.calorie_target ?? null,
+          cardio_target: program.cardio_target ?? null,
+          meal_plan: program.meal_plan ?? null,
+        }}
+      />
 
       <div className="mt-6 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">Workout days</h2>
