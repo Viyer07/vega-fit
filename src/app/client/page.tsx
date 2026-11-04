@@ -26,7 +26,7 @@ export default async function ClientDashboard() {
 
   const { data: program } = await supabase
     .from('programs')
-    .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, cardio_target, meal_plan')
+    .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, protein_target, carbs_target, fat_target, cardio_target')
     .eq('client_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -79,10 +79,18 @@ export default async function ClientDashboard() {
   fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45)
   const { data: checkinRows } = await supabase
     .from('daily_checkins')
-    .select('logged_date, cardio_minutes, end_of_day_calories')
+    .select('logged_date, cardio_minutes, end_of_day_calories, end_of_day_protein, end_of_day_carbs, end_of_day_fat')
     .eq('client_id', user.id)
     .gte('logged_date', toDateStr(fortyFiveDaysAgo))
     .order('logged_date', { ascending: false })
+
+  const { data: mealRows } = await supabase
+    .from('meal_logs')
+    .select('id, logged_date, meal_number, name, calories, protein, carbs, fat')
+    .eq('client_id', user.id)
+    .gte('logged_date', toDateStr(fortyFiveDaysAgo))
+    .order('logged_date', { ascending: false })
+    .order('meal_number', { ascending: true })
 
   // Workout log dates (last 60 days) — for streak + week strip
   const sixtyDaysAgo = new Date()
@@ -222,10 +230,13 @@ export default async function ClientDashboard() {
       workoutHistory={workoutHistory}
       nutritionPlan={{
         calorie_target: program?.calorie_target ?? null,
+        protein_target: program?.protein_target ?? null,
+        carbs_target: program?.carbs_target ?? null,
+        fat_target: program?.fat_target ?? null,
         cardio_target: program?.cardio_target ?? null,
-        meal_plan: (program?.meal_plan as string[] | null) ?? null,
       }}
       checkins={checkinRows ?? []}
+      mealLogs={mealRows ?? []}
     />
   )
 }

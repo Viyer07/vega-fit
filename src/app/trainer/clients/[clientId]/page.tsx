@@ -24,7 +24,7 @@ export default async function ClientProgramPage({
 
   const { data: program } = await supabase
     .from('programs')
-    .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, cardio_target, meal_plan')
+    .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, protein_target, carbs_target, fat_target, cardio_target')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(1)

@@ -6,6 +6,7 @@ import BodyweightWidget from './BodyweightWidget'
 import WorkoutHistory from './WorkoutHistory'
 import RoutineSummary from '@/app/RoutineSummary'
 import NutritionTab from './NutritionTab'
+import type { Checkin, MealLog, Targets } from '@/lib/nutrition'
 import {
   ResponsiveContainer,
   LineChart,
@@ -95,6 +96,7 @@ export default function ClientTabs({
   goalWeight,
   nutritionPlan,
   checkins,
+  mealLogs,
 }: {
   fullName: string
   program: Program | null
@@ -108,8 +110,9 @@ export default function ClientTabs({
   recentPrs: PrEvent[]
   workoutHistory: WorkoutLog[]
   goalWeight: number | null
-  nutritionPlan: { calorie_target: number | null; cardio_target: string | null; meal_plan: string[] | null }
-  checkins: { logged_date: string; cardio_minutes: number | null; end_of_day_calories: number | null }[]
+  nutritionPlan: Targets
+  checkins: Checkin[]
+  mealLogs: MealLog[]
 }) {
   const [tab, setTab] = useState<Tab>('Dashboard')
 
@@ -153,7 +156,12 @@ export default function ClientTabs({
             <ProgressTab bodyweightLogs={bodyweightLogs} prData={prData} goalWeight={goalWeight} />
           )}
           {tab === 'Nutrition' && (
-            <NutritionTab plan={nutritionPlan} checkins={checkins} bodyweightLogs={bodyweightLogs} />
+            <NutritionTab
+              plan={nutritionPlan}
+              checkins={checkins}
+              mealLogs={mealLogs}
+              bodyweightLogs={bodyweightLogs}
+            />
           )}
           {tab === 'History' && <WorkoutHistory initial={workoutHistory} />}
         </div>

@@ -34,8 +34,10 @@ type Program = {
   phase_week: number
   phase_total_weeks: number
   calorie_target?: number | null
+  protein_target?: number | null
+  carbs_target?: number | null
+  fat_target?: number | null
   cardio_target?: string | null
-  meal_plan?: string[] | null
 }
 
 export default function ProgramBuilder({
@@ -71,7 +73,7 @@ export default function ProgramBuilder({
         phase_week: Number(formData.get('phase_week') || 1),
         phase_total_weeks: Number(formData.get('phase_total_weeks') || 4),
       })
-      .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, cardio_target, meal_plan')
+      .select('id, name, phase_name, phase_week, phase_total_weeks, calorie_target, protein_target, carbs_target, fat_target, cardio_target')
       .single()
     setBusy(false)
     if (error) return alert(error.message)
@@ -211,8 +213,10 @@ export default function ProgramBuilder({
         programId={program.id}
         initial={{
           calorie_target: program.calorie_target ?? null,
+          protein_target: program.protein_target ?? null,
+          carbs_target: program.carbs_target ?? null,
+          fat_target: program.fat_target ?? null,
           cardio_target: program.cardio_target ?? null,
-          meal_plan: program.meal_plan ?? null,
         }}
       />
 

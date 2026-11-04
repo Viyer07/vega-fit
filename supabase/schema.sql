@@ -22,7 +22,10 @@ create table programs (
   created_at timestamptz not null default now(),
   calorie_target int,
   cardio_target text,
-  meal_plan jsonb
+  meal_plan jsonb,
+  protein_target int,
+  carbs_target int,
+  fat_target int
 );
 
 create table workout_days (
@@ -190,6 +193,9 @@ create table daily_checkins (
   logged_date date not null default current_date,
   cardio_minutes int,
   end_of_day_calories int,
+  end_of_day_protein int,
+  end_of_day_carbs int,
+  end_of_day_fat int,
   created_at timestamptz not null default now(),
   unique (client_id, logged_date)
 );
@@ -201,4 +207,27 @@ create policy "view own checkins or client's" on daily_checkins
   for select using (client_id = auth.uid() or is_trainer_of(client_id));
 
 create policy "client manages own checkins" on daily_checkins
+  for all using (client_id = auth.uid()) with check (client_id = auth.uid());
+
+-- Individual meals a client logs (protein/carbs/fat in grams)
+create table meal_logs (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references profiles(id) on delete cascade,
+  logged_date date not null default current_date,
+  meal_number int not null default 1,
+  name text,
+  calories int,
+  protein int,
+  carbs int,
+  fat int,
+  created_at timestamptz not null default now()
+);
+
+create index on meal_logs (client_id, logged_date);
+alter table meal_logs enable row level security;
+
+create policy "view own meals or client's" on meal_logs
+  for select using (client_id = auth.uid() or is_trainer_of(client_id));
+
+create policy "client manages own meals" on meal_logs
   for all using (client_id = auth.uid()) with check (client_id = auth.uid());

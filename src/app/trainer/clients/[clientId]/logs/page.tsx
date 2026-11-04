@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { dayTotals, type Checkin, type MealLog } from '@/lib/nutrition'
 
 export default async function ClientLogsPage({
   params,
@@ -38,21 +39,40 @@ export default async function ClientLogsPage({
     .order('logged_date', { ascending: false })
     .limit(30)
 
-  const { data: checkins } = await supabase
+  const { data: checkinRows } = await supabase
     .from('daily_checkins')
-    .select('logged_date, cardio_minutes, end_of_day_calories')
+    .select('logged_date, cardio_minutes, end_of_day_calories, end_of_day_protein, end_of_day_carbs, end_of_day_fat')
     .eq('client_id', clientId)
     .order('logged_date', { ascending: false })
     .limit(14)
 
+  const fourteenDaysAgo = new Date()
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+  const { data: mealRows } = await supabase
+    .from('meal_logs')
+    .select('id, logged_date, meal_number, name, calories, protein, carbs, fat')
+    .eq('client_id', clientId)
+    .gte('logged_date', fourteenDaysAgo.toISOString().split('T')[0])
+    .order('meal_number', { ascending: true })
+
   const { data: latestProgram } = await supabase
     .from('programs')
-    .select('calorie_target')
+    .select('calorie_target, protein_target, carbs_target, fat_target, cardio_target')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  const calorieTarget = latestProgram?.calorie_target ?? null
+
+  const checkinByDate: Record<string, Checkin> = {}
+  for (const c of (checkinRows ?? []) as Checkin[]) checkinByDate[c.logged_date] = c
+  const mealsByDate: Record<string, MealLog[]> = {}
+  for (const m of (mealRows ?? []) as MealLog[]) (mealsByDate[m.logged_date] ??= []).push(m)
+  const nutritionDates = Array.from(
+    new Set([...Object.keys(checkinByDate), ...Object.keys(mealsByDate)])
+  )
+    .sort()
+    .reverse()
+    .slice(0, 14)
 
   return (
     <main className="min-h-screen bg-background px-6 py-8">
@@ -80,42 +100,57 @@ export default async function ClientLogsPage({
       )}
 
       {/* Nutrition / cardio check-ins */}
-      {checkins && checkins.length > 0 && (
+      {nutritionDates.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-lg font-semibold text-foreground">
-            Nutrition &amp; cardio (last 14 days)
-          </h2>
-          <div className="mt-3 overflow-x-auto rounded-xl border border-card2 bg-card p-4">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-muted">
-                  <th className="pb-2 font-normal">Date</th>
-                  <th className="pb-2 font-normal">Cardio</th>
-                  <th className="pb-2 font-normal">Calories</th>
-                  <th className="pb-2 font-normal">vs target</th>
-                </tr>
-              </thead>
-              <tbody>
-                {checkins.map((c) => {
-                  const delta =
-                    c.end_of_day_calories != null && calorieTarget != null
-                      ? c.end_of_day_calories - calorieTarget
-                      : null
-                  return (
-                    <tr key={c.logged_date} className="border-t border-card2 text-foreground">
-                      <td className="py-2 text-muted">{formatDate(c.logged_date)}</td>
-                      <td className="py-2">
-                        {c.cardio_minutes != null ? `${c.cardio_minutes} min` : '—'}
-                      </td>
-                      <td className="py-2">{c.end_of_day_calories ?? '—'}</td>
-                      <td className="py-2">
-                        {delta == null ? '—' : `${delta > 0 ? '+' : ''}${delta}`}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <h2 className="text-lg font-semibold text-foreground">Nutrition &amp; cardio</h2>
+          {latestProgram && (
+            <p className="mt-1 text-xs text-muted">
+              Targets: {latestProgram.calorie_target ?? '—'} kcal · P {latestProgram.protein_target ?? '—'}g · C{' '}
+              {latestProgram.carbs_target ?? '—'}g · F {latestProgram.fat_target ?? '—'}g
+              {latestProgram.cardio_target ? ` · Cardio: ${latestProgram.cardio_target}` : ''}
+            </p>
+          )}
+          <div className="mt-3 space-y-3">
+            {nutritionDates.map((date) => {
+              const c = checkinByDate[date]
+              const meals = mealsByDate[date] ?? []
+              const t = dayTotals(c, meals)
+              const delta =
+                t.calories != null && latestProgram?.calorie_target != null
+                  ? t.calories - latestProgram.calorie_target
+                  : null
+              return (
+                <div key={date} className="rounded-xl border border-card2 bg-card p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">{formatDate(date)}</p>
+                    <p className="text-sm text-foreground">
+                      {t.calories ?? '—'} kcal · P {t.protein ?? '—'}g · C {t.carbs ?? '—'}g · F{' '}
+                      {t.fat ?? '—'}g
+                      {delta != null && (
+                        <span className="ml-2 text-muted">
+                          ({delta > 0 ? '+' : ''}
+                          {delta})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    Cardio: {c?.cardio_minutes != null ? `${c.cardio_minutes} min` : '—'}
+                  </p>
+                  {meals.length > 0 && (
+                    <ul className="mt-2 space-y-1 border-t border-card2 pt-2 text-xs text-muted">
+                      {meals.map((m, i) => (
+                        <li key={m.id}>
+                          <span className="text-foreground">{m.name || `Meal ${i + 1}`}</span>:{' '}
+                          {m.calories ?? '—'} kcal · P {m.protein ?? '—'}g · C {m.carbs ?? '—'}g · F{' '}
+                          {m.fat ?? '—'}g
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
