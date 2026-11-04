@@ -196,6 +196,8 @@ create table daily_checkins (
   end_of_day_protein int,
   end_of_day_carbs int,
   end_of_day_fat int,
+  cardio_type text,
+  cardio_intensity text,
   created_at timestamptz not null default now(),
   unique (client_id, logged_date)
 );

@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { dayTotals, type Checkin, type MealLog } from '@/lib/nutrition'
+import { cardioSummary, dayTotals, type Checkin, type MealLog } from '@/lib/nutrition'
 
 export default async function ClientLogsPage({
   params,
@@ -41,7 +41,7 @@ export default async function ClientLogsPage({
 
   const { data: checkinRows } = await supabase
     .from('daily_checkins')
-    .select('logged_date, cardio_minutes, end_of_day_calories, end_of_day_protein, end_of_day_carbs, end_of_day_fat')
+    .select('logged_date, cardio_minutes, cardio_type, cardio_intensity, end_of_day_calories, end_of_day_protein, end_of_day_carbs, end_of_day_fat')
     .eq('client_id', clientId)
     .order('logged_date', { ascending: false })
     .limit(14)
@@ -135,7 +135,7 @@ export default async function ClientLogsPage({
                     </p>
                   </div>
                   <p className="mt-1 text-xs text-muted">
-                    Cardio: {c?.cardio_minutes != null ? `${c.cardio_minutes} min` : '—'}
+                    Cardio: {cardioSummary(c) ?? '—'}
                   </p>
                   {meals.length > 0 && (
                     <ul className="mt-2 space-y-1 border-t border-card2 pt-2 text-xs text-muted">

@@ -27,10 +27,22 @@ export type MealLog = {
 export type Checkin = {
   logged_date: string
   cardio_minutes: number | null
+  cardio_type: string | null
+  cardio_intensity: string | null
   end_of_day_calories: number | null
   end_of_day_protein: number | null
   end_of_day_carbs: number | null
   end_of_day_fat: number | null
+}
+
+export function cardioSummary(c: Checkin | undefined) {
+  if (!c) return null
+  const parts = [
+    c.cardio_minutes != null ? `${c.cardio_minutes} min` : null,
+    c.cardio_type || null,
+    c.cardio_intensity || null,
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : null
 }
 
 // Local-date string. The app's other widgets use UTC, which flips to "tomorrow" in the evening.

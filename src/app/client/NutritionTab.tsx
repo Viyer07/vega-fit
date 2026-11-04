@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
+  cardioSummary,
   dayTotals,
   localDateStr,
   type Checkin,
@@ -63,6 +64,8 @@ export default function NutritionTab({
     return {
       weight: str(weightMap[d]),
       cardio: str(c?.cardio_minutes),
+      cardioType: c?.cardio_type ?? '',
+      intensity: c?.cardio_intensity ?? '',
       kcal: str(c?.end_of_day_calories),
       protein: str(c?.end_of_day_protein),
       carbs: str(c?.end_of_day_carbs),
@@ -145,14 +148,25 @@ export default function NutritionTab({
     const w = numOrNull(day.weight)
     const fields = {
       cardio_minutes: numOrNull(day.cardio),
+      cardio_type: day.cardioType.trim() || null,
+      cardio_intensity: day.intensity.trim() || null,
       end_of_day_calories: numOrNull(day.kcal),
       end_of_day_protein: numOrNull(day.protein),
       end_of_day_carbs: numOrNull(day.carbs),
       end_of_day_fat: numOrNull(day.fat),
     }
-    const all = [w, ...Object.values(fields)]
-    if (all.every((v) => v == null)) return setDayError('Enter at least one value.')
-    if (all.some((v) => v != null && (Number.isNaN(v) || v < 0))) {
+    const nums = [
+      w,
+      fields.cardio_minutes,
+      fields.end_of_day_calories,
+      fields.end_of_day_protein,
+      fields.end_of_day_carbs,
+      fields.end_of_day_fat,
+    ]
+    if (nums.every((v) => v == null) && !fields.cardio_type && !fields.cardio_intensity) {
+      return setDayError('Enter at least one value.')
+    }
+    if (nums.some((v) => v != null && (Number.isNaN(v) || v < 0))) {
       return setDayError('Values must be positive numbers.')
     }
 
@@ -397,6 +411,24 @@ export default function NutritionTab({
               />
             </div>
           ))}
+          <div className="w-40">
+            <label className="block text-xs text-muted">Cardio type</label>
+            <input
+              value={day.cardioType}
+              onChange={(e) => setDay({ ...day, cardioType: e.target.value })}
+              placeholder="Stairmaster, treadmill…"
+              className={inputClass}
+            />
+          </div>
+          <div className="min-w-[200px] flex-1">
+            <label className="block text-xs text-muted">Cardio intensity</label>
+            <input
+              value={day.intensity}
+              onChange={(e) => setDay({ ...day, intensity: e.target.value })}
+              placeholder="Level 7, or speed 2.0 incline 10"
+              className={inputClass}
+            />
+          </div>
           <button
             onClick={saveDay}
             disabled={daySaving}
@@ -436,9 +468,7 @@ export default function NutritionTab({
                   <tr key={d} className="border-t border-card2 text-foreground">
                     <td className="py-2 text-muted">{d.slice(5)}</td>
                     <td className="py-2">{weightMap[d] != null ? `${weightMap[d]} lb` : '—'}</td>
-                    <td className="py-2">
-                      {c?.cardio_minutes != null ? `${c.cardio_minutes} min` : '—'}
-                    </td>
+                    <td className="py-2">{cardioSummary(c) ?? '—'}</td>
                     <td className="py-2">{t.calories ?? '—'}</td>
                     <td className="py-2">{t.protein ?? '—'}</td>
                     <td className="py-2">{t.carbs ?? '—'}</td>

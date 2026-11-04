@@ -79,7 +79,7 @@ export default async function ClientDashboard() {
   fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45)
   const { data: checkinRows } = await supabase
     .from('daily_checkins')
-    .select('logged_date, cardio_minutes, end_of_day_calories, end_of_day_protein, end_of_day_carbs, end_of_day_fat')
+    .select('logged_date, cardio_minutes, cardio_type, cardio_intensity, end_of_day_calories, end_of_day_protein, end_of_day_carbs, end_of_day_fat')
     .eq('client_id', user.id)
     .gte('logged_date', toDateStr(fortyFiveDaysAgo))
     .order('logged_date', { ascending: false })
